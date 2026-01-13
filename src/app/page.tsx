@@ -1,18 +1,71 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GearWheel from '@/components/GearWheel';
 import ItemPicker from '@/components/ItemPicker';
 import StatsPanel from '@/components/StatsPanel';
 import {
   GearSlotType,
   EquippedItem,
-  GearItem
+  GearItem,
+  weapons,
+  armors,
+  accessories
 } from '@/data/items';
 
+const STORAGE_KEY = 'bdo_gear_helper_gear';
+
+// Serialize gear Map to JSON-friendly format
+function serializeGear(gear: Map<GearSlotType, EquippedItem>): string {
+  const obj: Record<string, { itemId: string; enhanceLevel: number }> = {};
+  gear.forEach((eq, slot) => {
+    obj[slot] = { itemId: eq.item.id, enhanceLevel: eq.enhanceLevel };
+  });
+  return JSON.stringify(obj);
+}
+
+// Deserialize gear from localStorage
+function deserializeGear(stored: string): Map<GearSlotType, EquippedItem> {
+  const allItems = [...weapons, ...armors, ...accessories];
+  const gear = new Map<GearSlotType, EquippedItem>();
+
+  try {
+    const obj = JSON.parse(stored) as Record<string, { itemId: string; enhanceLevel: number }>;
+    Object.entries(obj).forEach(([slot, data]) => {
+      const item = allItems.find(i => i.id === data.itemId);
+      if (item) {
+        // Adjust slot for the equipped item (for accessories that share slots)
+        const adjustedItem = { ...item, slot: slot as GearSlotType };
+        gear.set(slot as GearSlotType, { item: adjustedItem, enhanceLevel: data.enhanceLevel });
+      }
+    });
+  } catch {
+    // Return empty map on parse error
+  }
+
+  return gear;
+}
+
+// Load gear from localStorage (for lazy initialization)
+function loadGearFromStorage(): Map<GearSlotType, EquippedItem> {
+  if (typeof window === 'undefined') {
+    return new Map();
+  }
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    return deserializeGear(stored);
+  }
+  return new Map();
+}
+
 export default function Home() {
-  const [gear, setGear] = useState<Map<GearSlotType, EquippedItem>>(new Map());
+  const [gear, setGear] = useState<Map<GearSlotType, EquippedItem>>(() => loadGearFromStorage());
   const [selectedSlot, setSelectedSlot] = useState<GearSlotType | null>(null);
+
+  // Save gear to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, serializeGear(gear));
+  }, [gear]);
 
   const handleSlotClick = (slot: GearSlotType) => {
     setSelectedSlot(slot);
@@ -40,6 +93,7 @@ export default function Home() {
 
   const handleClearAll = () => {
     setGear(new Map());
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
