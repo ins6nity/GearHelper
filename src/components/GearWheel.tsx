@@ -13,14 +13,13 @@ import { GearSlotType, EquippedItem } from '@/data/items';
 interface GearWheelProps {
     gear: Map<GearSlotType, EquippedItem>;
     onSlotClick: (slot: GearSlotType) => void;
-    onClearSlot: (slot: GearSlotType) => void;
 }
 
 // Configuration
 const WHEEL_SIZE = 400;
 const CENTER = WHEEL_SIZE / 2;
-const MAIN_RADIUS = 150;
-const SLOT_SIZE = 50;
+const MAIN_RADIUS = 140;
+const SLOT_SIZE = 56;
 
 // Slot definition
 interface SlotDef {
@@ -61,7 +60,7 @@ function calcPos(angle: number, radiusMult: number) {
     };
 }
 
-export default function GearWheel({ gear, onSlotClick, onClearSlot }: GearWheelProps) {
+export default function GearWheel({ gear, onSlotClick }: GearWheelProps) {
     const [world, setWorld] = useState<World>('Kharazad');
 
     useEffect(() => {
@@ -104,14 +103,26 @@ export default function GearWheel({ gear, onSlotClick, onClearSlot }: GearWheelP
 
             {/* Gear Wheel */}
             <div style={{ position: 'relative', width: WHEEL_SIZE, height: WHEEL_SIZE }}>
-                {/* Circle Guide */}
+                {/* Outer Ring Guide */}
                 <div style={{
                     position: 'absolute',
-                    top: CENTER - MAIN_RADIUS,
-                    left: CENTER - MAIN_RADIUS,
-                    width: MAIN_RADIUS * 2,
-                    height: MAIN_RADIUS * 2,
-                    border: '2px dashed rgba(255,255,255,0.1)',
+                    top: CENTER - MAIN_RADIUS - SLOT_SIZE / 2 - 8,
+                    left: CENTER - MAIN_RADIUS - SLOT_SIZE / 2 - 8,
+                    width: (MAIN_RADIUS + SLOT_SIZE / 2) * 2 + 16,
+                    height: (MAIN_RADIUS + SLOT_SIZE / 2) * 2 + 16,
+                    border: '2px solid rgba(139, 92, 246, 0.2)',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                    boxShadow: '0 0 20px rgba(139, 92, 246, 0.1)',
+                }} />
+                {/* Inner Ring Guide */}
+                <div style={{
+                    position: 'absolute',
+                    top: CENTER - MAIN_RADIUS + SLOT_SIZE / 2 + 8,
+                    left: CENTER - MAIN_RADIUS + SLOT_SIZE / 2 + 8,
+                    width: (MAIN_RADIUS - SLOT_SIZE / 2) * 2 - 16,
+                    height: (MAIN_RADIUS - SLOT_SIZE / 2) * 2 - 16,
+                    border: '1px solid rgba(255, 215, 0, 0.15)',
                     borderRadius: '50%',
                     pointerEvents: 'none',
                 }} />
@@ -136,19 +147,21 @@ export default function GearWheel({ gear, onSlotClick, onClearSlot }: GearWheelP
                                 top: pos.y,
                                 width: SLOT_SIZE,
                                 height: SLOT_SIZE,
-                                background: '#121212',
-                                border: `2px solid ${borderColor}`,
-                                borderRadius: '4px',
+                                background: 'radial-gradient(circle at 30% 30%, #2a2a2a 0%, #0d0d0d 100%)',
+                                border: `3px solid ${borderColor}`,
+                                borderRadius: '50%',
+                                boxShadow: `0 0 8px ${borderColor}40, inset 0 2px 4px rgba(255,255,255,0.05)`,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                             }}
                         >
                             <img
                                 src={icon}
                                 alt={s.label}
-                                style={{ width: 42, height: 42, objectFit: 'contain' }}
+                                style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: '50%' }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
                             />
                             {eq && lvl > 0 && (
@@ -169,18 +182,18 @@ export default function GearWheel({ gear, onSlotClick, onClearSlot }: GearWheelP
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: 70, height: 70,
-                    background: 'radial-gradient(circle, #1a2a1a 0%, #121212 100%)',
-                    border: '2px solid #4ade80',
-                    borderRadius: '4px',
+                    width: 80, height: 80,
+                    background: 'radial-gradient(circle at 30% 30%, #1a3a1a 0%, #0a1a0a 100%)',
+                    border: '3px solid #4ade80',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 20px rgba(74, 222, 128, 0.3), inset 0 2px 6px rgba(255,255,255,0.08)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
-                    <span style={{ fontSize: '24px', filter: 'drop-shadow(0 0 8px rgba(80,200,120,0.5))' }}>💎</span>
-                    <span style={{ fontSize: '7px', color: '#666', marginTop: '2px' }}>Crystal</span>
-                    <span style={{ fontSize: '9px', color: '#4ade80', fontWeight: 600 }}>Nenhum</span>
+                    <span style={{ fontSize: '28px', filter: 'drop-shadow(0 0 10px rgba(80,200,120,0.6))' }}>💎</span>
+                    <span style={{ fontSize: '8px', color: '#4ade80', fontWeight: 600, marginTop: '2px' }}>Crystal</span>
                 </div>
             </div>
 

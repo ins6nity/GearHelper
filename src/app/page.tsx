@@ -71,7 +71,6 @@ export default function Home() {
           <GearWheel
             gear={gear}
             onSlotClick={handleSlotClick}
-            onClearSlot={handleClearSlot}
           />
 
           {/* Quick Tips */}
