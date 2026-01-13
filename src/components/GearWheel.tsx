@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
-import GearSlot from './GearSlot';
+import React, { useState, useEffect } from 'react';
 import {
-    GearSlotType,
-    EquippedItem,
-    slotNames
-} from '@/data/items';
+    World,
+    SlotType,
+    getIconUrl,
+    preloadWorldIcons
+} from '@/services/IconProvider';
+import { RARITY_COLORS, toRoman } from '@/data/slotConfig';
+import { GearSlotType, EquippedItem } from '@/data/items';
 
 interface GearWheelProps {
     gear: Map<GearSlotType, EquippedItem>;
@@ -14,237 +16,197 @@ interface GearWheelProps {
     onClearSlot: (slot: GearSlotType) => void;
 }
 
-// Define slot positions around the wheel (in degrees, 0 = top)
-// Layout mimics BDO gear wheel: weapons on left, armor on right, accessories around
-const slotPositions: { slot: GearSlotType; angle: number; ring: 'inner' | 'outer' }[] = [
-    // Weapons (left side) - outer ring
-    { slot: 'mainhand', angle: 225, ring: 'outer' },
-    { slot: 'subhand', angle: 270, ring: 'outer' },
-    { slot: 'awakening', angle: 315, ring: 'outer' },
-    // Armor (right side) - outer ring
-    { slot: 'helmet', angle: 0, ring: 'outer' },
-    { slot: 'armor', angle: 45, ring: 'outer' },
-    { slot: 'gloves', angle: 90, ring: 'outer' },
-    { slot: 'shoes', angle: 135, ring: 'outer' },
-    // Accessories - inner ring
-    { slot: 'necklace', angle: 0, ring: 'inner' },
-    { slot: 'earring1', angle: 60, ring: 'inner' },
-    { slot: 'earring2', angle: 120, ring: 'inner' },
-    { slot: 'belt', angle: 180, ring: 'inner' },
-    { slot: 'ring1', angle: 240, ring: 'inner' },
-    { slot: 'ring2', angle: 300, ring: 'inner' },
+// Configuration
+const WHEEL_SIZE = 400;
+const CENTER = WHEEL_SIZE / 2;
+const MAIN_RADIUS = 150;
+const SLOT_SIZE = 50;
+
+// Slot definition
+interface SlotDef {
+    id: SlotType;
+    label: string;
+    angle: number;
+    radiusMult: number;
+    gearSlot: GearSlotType | null;
+}
+
+// 12 slots at 30° intervals
+const SLOTS: SlotDef[] = [
+    { id: 'HELMET', label: 'Helmet', angle: 0, radiusMult: 1, gearSlot: 'helmet' },
+    { id: 'EARRING_RIGHT', label: 'Ear R', angle: 30, radiusMult: 1, gearSlot: 'earring2' },
+    { id: 'RING_RIGHT', label: 'Ring R', angle: 60, radiusMult: 1, gearSlot: 'ring2' },
+    { id: 'ARTEFACT_RIGHT', label: 'Art R', angle: 90, radiusMult: 1, gearSlot: null },
+    { id: 'NECKLACE', label: 'Amulet', angle: 120, radiusMult: 1, gearSlot: 'necklace' },
+    { id: 'BOOTS', label: 'Boots', angle: 150, radiusMult: 1, gearSlot: 'shoes' },
+    { id: 'WEAPON', label: 'Weapon', angle: 180, radiusMult: 1, gearSlot: 'mainhand' },
+    { id: 'OFFHAND', label: 'Offhand', angle: 210, radiusMult: 1, gearSlot: 'subhand' },
+    { id: 'GLOVES', label: 'Gloves', angle: 240, radiusMult: 1, gearSlot: 'gloves' },
+    { id: 'ARTEFACT_LEFT', label: 'Art L', angle: 270, radiusMult: 1, gearSlot: null },
+    { id: 'RING_LEFT', label: 'Ring L', angle: 300, radiusMult: 1, gearSlot: 'ring1' },
+    { id: 'EARRING_LEFT', label: 'Ear L', angle: 330, radiusMult: 1, gearSlot: 'earring1' },
 ];
 
+const CHEST_SLOT: SlotDef = {
+    id: 'CHEST', label: 'Armor', angle: 0, radiusMult: 0.45, gearSlot: 'armor'
+};
+
+// Calculate position via trigonometry
+function calcPos(angle: number, radiusMult: number) {
+    const radius = MAIN_RADIUS * radiusMult;
+    const rad = (angle - 90) * (Math.PI / 180);
+    return {
+        x: Math.round(CENTER + Math.cos(rad) * radius - SLOT_SIZE / 2),
+        y: Math.round(CENTER + Math.sin(rad) * radius - SLOT_SIZE / 2),
+    };
+}
+
 export default function GearWheel({ gear, onSlotClick, onClearSlot }: GearWheelProps) {
-    const outerRadius = 180;
-    const innerRadius = 100;
+    const [world, setWorld] = useState<World>('Kharazad');
+
+    useEffect(() => {
+        preloadWorldIcons(world);
+    }, [world]);
+
+    // Calculate stats
+    let ap = 0, aap = 0, dp = 0;
+    gear.forEach((eq) => {
+        const { item, enhanceLevel } = eq;
+        ap += item.enhanceAP?.[enhanceLevel] ?? item.baseAP ?? 0;
+        aap += item.enhanceAAP?.[enhanceLevel] ?? item.baseAAP ?? 0;
+        dp += item.enhanceDP?.[enhanceLevel] ?? item.baseDP ?? 0;
+    });
+    const gs = ap + aap + dp;
+
+    const allSlots = [...SLOTS, CHEST_SLOT];
 
     return (
-        <div className="gear-wheel-container">
-            <div className="gear-wheel">
-                {/* Center hub */}
-                <div className="wheel-center">
-                    <span className="center-icon">⚔️</span>
-                    <span className="center-label">{gear.size}/13</span>
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            {/* World Selector */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '6px 12px', background: '#1a1a1a',
+                border: '1px solid #333', borderRadius: '6px'
+            }}>
+                <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase' }}>World:</span>
+                <select
+                    value={world}
+                    onChange={(e) => setWorld(e.target.value as World)}
+                    style={{
+                        background: '#222', border: '1px solid #444', color: '#fff',
+                        padding: '5px 10px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer'
+                    }}
+                >
+                    <option value="Kharazad">Kharazad</option>
+                    <option value="Edana">Edana</option>
+                </select>
+            </div>
 
-                {/* Slot labels for sections */}
-                <div className="section-label weapons-label">Weapons</div>
-                <div className="section-label armor-label">Armor</div>
-                <div className="section-label accessories-label">Accessories</div>
+            {/* Gear Wheel */}
+            <div style={{ position: 'relative', width: WHEEL_SIZE, height: WHEEL_SIZE }}>
+                {/* Circle Guide */}
+                <div style={{
+                    position: 'absolute',
+                    top: CENTER - MAIN_RADIUS,
+                    left: CENTER - MAIN_RADIUS,
+                    width: MAIN_RADIUS * 2,
+                    height: MAIN_RADIUS * 2,
+                    border: '2px dashed rgba(255,255,255,0.1)',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                }} />
 
-                {/* Gear slots positioned in a circle */}
-                {slotPositions.map(({ slot, angle, ring }) => {
-                    const radius = ring === 'outer' ? outerRadius : innerRadius;
-                    const radians = (angle - 90) * (Math.PI / 180);
-                    const x = Math.cos(radians) * radius;
-                    const y = Math.sin(radians) * radius;
+                {/* Slots */}
+                {allSlots.map((s) => {
+                    const pos = calcPos(s.angle, s.radiusMult);
+                    const eq = s.gearSlot ? gear.get(s.gearSlot) : undefined;
+                    const rarity = eq?.item.rarity || 'common';
+                    const borderColor = RARITY_COLORS[rarity] || '#444';
+                    const lvl = eq?.enhanceLevel || 0;
+                    const icon = getIconUrl(world, s.id);
 
                     return (
                         <div
-                            key={slot}
-                            className="wheel-slot-wrapper"
+                            key={s.id}
+                            onClick={() => s.gearSlot && onSlotClick(s.gearSlot)}
+                            title={s.label}
                             style={{
-                                transform: `translate(${x}px, ${y}px)`,
+                                position: 'absolute',
+                                left: pos.x,
+                                top: pos.y,
+                                width: SLOT_SIZE,
+                                height: SLOT_SIZE,
+                                background: '#121212',
+                                border: `2px solid ${borderColor}`,
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                             }}
                         >
-                            <GearSlot
-                                slot={slot}
-                                equipped={gear.get(slot)}
-                                onClick={() => onSlotClick(slot)}
+                            <img
+                                src={icon}
+                                alt={s.label}
+                                style={{ width: 42, height: 42, objectFit: 'contain' }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
                             />
-                            <div className="wheel-slot-label">{slotNames[slot]}</div>
-                            {gear.has(slot) && (
-                                <button
-                                    className="clear-slot-btn"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onClearSlot(slot);
-                                    }}
-                                    title="Remove item"
-                                >
-                                    ✕
-                                </button>
+                            {eq && lvl > 0 && (
+                                <span style={{
+                                    position: 'absolute', bottom: 1, left: '50%', transform: 'translateX(-50%)',
+                                    fontSize: '12px', fontWeight: 'bold', color: '#fff', textShadow: '0 0 3px #000'
+                                }}>
+                                    {toRoman(lvl)}
+                                </span>
                             )}
                         </div>
                     );
                 })}
 
-                {/* Decorative rings */}
-                <div className="wheel-ring outer-ring" />
-                <div className="wheel-ring inner-ring" />
+                {/* Crystal Center */}
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 70, height: 70,
+                    background: 'radial-gradient(circle, #1a2a1a 0%, #121212 100%)',
+                    border: '2px solid #4ade80',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <span style={{ fontSize: '24px', filter: 'drop-shadow(0 0 8px rgba(80,200,120,0.5))' }}>💎</span>
+                    <span style={{ fontSize: '7px', color: '#666', marginTop: '2px' }}>Crystal</span>
+                    <span style={{ fontSize: '9px', color: '#4ade80', fontWeight: 600 }}>Nenhum</span>
+                </div>
             </div>
 
-            <style jsx>{`
-                .gear-wheel-container {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    padding: var(--spacing-xl);
-                    min-height: 500px;
-                }
-
-                .gear-wheel {
-                    position: relative;
-                    width: 420px;
-                    height: 420px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .wheel-center {
-                    position: absolute;
-                    width: 80px;
-                    height: 80px;
-                    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
-                    border: 2px solid var(--accent-gold);
-                    border-radius: 50%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10;
-                    box-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
-                }
-
-                .center-icon {
-                    font-size: 1.5rem;
-                }
-
-                .center-label {
-                    font-size: 0.75rem;
-                    color: var(--text-muted);
-                    margin-top: 2px;
-                }
-
-                .wheel-ring {
-                    position: absolute;
-                    border: 1px solid var(--border-subtle);
-                    border-radius: 50%;
-                    pointer-events: none;
-                }
-
-                .outer-ring {
-                    width: ${outerRadius * 2 + 70}px;
-                    height: ${outerRadius * 2 + 70}px;
-                    border-style: dashed;
-                    opacity: 0.5;
-                }
-
-                .inner-ring {
-                    width: ${innerRadius * 2 + 70}px;
-                    height: ${innerRadius * 2 + 70}px;
-                    border-style: dotted;
-                    opacity: 0.3;
-                }
-
-                .wheel-slot-wrapper {
-                    position: absolute;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 4px;
-                    z-index: 5;
-                }
-
-                .wheel-slot-label {
-                    font-size: 0.6rem;
-                    color: var(--text-muted);
-                    text-align: center;
-                    white-space: nowrap;
-                    max-width: 70px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                .clear-slot-btn {
-                    position: absolute;
-                    top: -6px;
-                    right: -6px;
-                    width: 18px;
-                    height: 18px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-medium);
-                    border-radius: 50%;
-                    color: var(--text-muted);
-                    font-size: 0.6rem;
-                    cursor: pointer;
-                    opacity: 0;
-                    transition: all 0.15s ease;
-                    z-index: 15;
-                }
-
-                .wheel-slot-wrapper:hover .clear-slot-btn {
-                    opacity: 1;
-                }
-
-                .clear-slot-btn:hover {
-                    background: var(--enhance-red);
-                    border-color: var(--enhance-red);
-                    color: white;
-                }
-
-                .section-label {
-                    position: absolute;
-                    font-size: 0.65rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    color: var(--text-muted);
-                    opacity: 0.6;
-                    pointer-events: none;
-                }
-
-                .weapons-label {
-                    left: -10px;
-                    top: 50%;
-                    transform: translateY(-50%) rotate(-90deg);
-                }
-
-                .armor-label {
-                    right: -10px;
-                    top: 50%;
-                    transform: translateY(-50%) rotate(90deg);
-                }
-
-                .accessories-label {
-                    bottom: 30px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                }
-
-                @media (max-width: 500px) {
-                    .gear-wheel-container {
-                        transform: scale(0.8);
-                        transform-origin: center;
-                        padding: var(--spacing-md);
-                        min-height: 400px;
-                    }
-                }
-            `}</style>
+            {/* Stats Bar */}
+            <div style={{
+                display: 'flex', gap: '20px', padding: '10px 20px',
+                background: 'linear-gradient(180deg, #1a1a1a, #111)',
+                border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px'
+            }}>
+                <div style={{ textAlign: 'center', minWidth: 50 }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#ef4444' }}>{ap}</span>
+                    <span style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>PA</span>
+                </div>
+                <div style={{ textAlign: 'center', minWidth: 50 }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#fb923c' }}>{aap}</span>
+                    <span style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>PA Desp.</span>
+                </div>
+                <div style={{ textAlign: 'center', minWidth: 50 }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa' }}>{dp}</span>
+                    <span style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>PD</span>
+                </div>
+                <div style={{ textAlign: 'center', minWidth: 50 }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#fbbf24' }}>{gs}</span>
+                    <span style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>GS</span>
+                </div>
+            </div>
         </div>
     );
 }
