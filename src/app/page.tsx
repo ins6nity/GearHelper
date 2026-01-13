@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import GearWheel from '@/components/GearWheel';
 import ItemPicker from '@/components/ItemPicker';
 import StatsPanel from '@/components/StatsPanel';
@@ -10,9 +10,63 @@ import {
   GearItem
 } from '@/data/items';
 
+const STORAGE_KEY = 'bdo-gear-helper-gear';
+
+interface StoredGear {
+  slot: GearSlotType;
+  item: GearItem;
+  enhanceLevel: number;
+}
+
+function saveGearToStorage(gear: Map<GearSlotType, EquippedItem>): void {
+  try {
+    const gearArray: StoredGear[] = [];
+    gear.forEach((equipped, slot) => {
+      gearArray.push({
+        slot,
+        item: equipped.item,
+        enhanceLevel: equipped.enhanceLevel,
+      });
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gearArray));
+  } catch {
+    // localStorage may be unavailable or full
+  }
+}
+
+function loadGearFromStorage(): Map<GearSlotType, EquippedItem> {
+  try {
+    if (typeof window === 'undefined') return new Map();
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return new Map();
+
+    const gearArray: StoredGear[] = JSON.parse(stored);
+    const gearMap = new Map<GearSlotType, EquippedItem>();
+
+    gearArray.forEach(({ slot, item, enhanceLevel }) => {
+      gearMap.set(slot, { item, enhanceLevel });
+    });
+
+    return gearMap;
+  } catch {
+    // localStorage may be unavailable or data corrupted
+    return new Map();
+  }
+}
+
 export default function Home() {
-  const [gear, setGear] = useState<Map<GearSlotType, EquippedItem>>(new Map());
+  const [gear, setGear] = useState<Map<GearSlotType, EquippedItem>>(() => loadGearFromStorage());
   const [selectedSlot, setSelectedSlot] = useState<GearSlotType | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Save gear to localStorage whenever it changes (skip initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    saveGearToStorage(gear);
+  }, [gear]);
 
   const handleSlotClick = (slot: GearSlotType) => {
     setSelectedSlot(slot);
@@ -81,6 +135,7 @@ export default function Home() {
               <li>Clica nos slots para adicionar o teu gear atual</li>
               <li>O sistema calcula automaticamente o próximo upgrade mais barato</li>
               <li>Os custos são baseados nos cálculos do BairogHaan</li>
+              <li>O teu gear é guardado automaticamente no browser</li>
             </ul>
           </div>
         </section>

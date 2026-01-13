@@ -3,7 +3,6 @@
 import React from 'react';
 import { EquippedItem, getItemStats, GearSlotType } from '@/data/items';
 import {
-    getBestUpgrade,
     formatCost,
     formatSilverPerStat,
     calculateUpgradeOptions,
@@ -30,7 +29,6 @@ export default function StatsPanel({ gear }: StatsPanelProps) {
     const gearscore = totalAP + totalAAP + totalDP;
 
     // Get upgrade recommendations
-    const bestUpgrade = getBestUpgrade(gear);
     const top3Upgrades = calculateUpgradeOptions(gear).slice(0, 3);
 
     return (
