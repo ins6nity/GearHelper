@@ -273,6 +273,16 @@ export const accessories: GearItem[] = [
         maxEnhance: 5
     },
     {
+        id: 'edana_earring',
+        name: "Edana's Earring",
+        slot: 'earring1',
+        rarity: 'mythic',
+        icon: '💠',
+        baseAP: 19,
+        enhanceAP: [19, 22, 25, 28, 31, 34],
+        maxEnhance: 5
+    },
+    {
         id: 'crescent_ring',
         name: 'Crescent Ring',
         slot: 'ring1',
@@ -300,6 +310,16 @@ export const accessories: GearItem[] = [
         icon: '👁️',
         baseAP: 15,
         enhanceAP: [15, 17, 19, 21, 23, 25],
+        maxEnhance: 5
+    },
+    {
+        id: 'kharazad_ring',
+        name: 'Ring of the Crescent Guardian (Kharazad)',
+        slot: 'ring1',
+        rarity: 'mythic',
+        icon: '🌓',
+        baseAP: 20,
+        enhanceAP: [20, 23, 26, 29, 32, 35],
         maxEnhance: 5
     },
     {
