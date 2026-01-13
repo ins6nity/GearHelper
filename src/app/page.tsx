@@ -1,22 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import GearSlot from '@/components/GearSlot';
+import GearWheel from '@/components/GearWheel';
 import ItemPicker from '@/components/ItemPicker';
 import StatsPanel from '@/components/StatsPanel';
 import {
   GearSlotType,
   EquippedItem,
-  GearItem,
-  slotNames
+  GearItem
 } from '@/data/items';
-
-// Define gear layout
-const gearLayout: { section: string; slots: GearSlotType[] }[] = [
-  { section: 'Armas', slots: ['mainhand', 'subhand', 'awakening'] },
-  { section: 'Armadura', slots: ['helmet', 'armor', 'gloves', 'shoes'] },
-  { section: 'Acessórios', slots: ['necklace', 'earring1', 'earring2', 'ring1', 'ring2', 'belt'] },
-];
 
 export default function Home() {
   const [gear, setGear] = useState<Map<GearSlotType, EquippedItem>>(new Map());
@@ -74,40 +66,13 @@ export default function Home() {
         <section className="gear-builder">
           <div className="gear-builder-header">
             <h2 className="gear-builder-title">Current Gear</h2>
-            <div className="gear-count">
-              {gear.size}/13 slots
-            </div>
           </div>
 
-          {gearLayout.map(({ section, slots }) => (
-            <div key={section} className="gear-section">
-              <h3 className="gear-section-title">{section}</h3>
-              <div className="gear-row">
-                {slots.map(slot => (
-                  <div key={slot} className="gear-slot-wrapper">
-                    <GearSlot
-                      slot={slot}
-                      equipped={gear.get(slot)}
-                      onClick={() => handleSlotClick(slot)}
-                    />
-                    <div className="slot-label">{slotNames[slot]}</div>
-                    {gear.has(slot) && (
-                      <button
-                        className="clear-slot-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClearSlot(slot);
-                        }}
-                        title="Remover item"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          <GearWheel
+            gear={gear}
+            onSlotClick={handleSlotClick}
+            onClearSlot={handleClearSlot}
+          />
 
           {/* Quick Tips */}
           <div className="tips-section">
@@ -255,77 +220,7 @@ export default function Home() {
           background: linear-gradient(to bottom, var(--accent-gold), var(--accent-purple));
           border-radius: 2px;
         }
-        
-        .gear-count {
-          font-size: 0.875rem;
-          color: var(--text-muted);
-          background: var(--bg-secondary);
-          padding: var(--spacing-xs) var(--spacing-sm);
-          border-radius: var(--radius-sm);
-        }
-        
-        .gear-section {
-          margin-bottom: var(--spacing-lg);
-        }
-        
-        .gear-section-title {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: var(--text-muted);
-          margin-bottom: var(--spacing-sm);
-        }
-        
-        .gear-row {
-          display: flex;
-          gap: var(--spacing-md);
-          flex-wrap: wrap;
-        }
-        
-        .gear-slot-wrapper {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: var(--spacing-xs);
-          position: relative;
-        }
-        
-        .slot-label {
-          font-size: 0.65rem;
-          color: var(--text-muted);
-          text-align: center;
-          max-width: 70px;
-        }
-        
-        .clear-slot-btn {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          width: 18px;
-          height: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--bg-primary);
-          border: 1px solid var(--border-medium);
-          border-radius: 50%;
-          color: var(--text-muted);
-          font-size: 0.6rem;
-          cursor: pointer;
-          opacity: 0;
-          transition: all 0.15s ease;
-        }
-        
-        .gear-slot-wrapper:hover .clear-slot-btn {
-          opacity: 1;
-        }
-        
-        .clear-slot-btn:hover {
-          background: var(--enhance-red);
-          border-color: var(--enhance-red);
-          color: white;
-        }
-        
+
         .tips-section {
           margin-top: var(--spacing-xl);
           padding: var(--spacing-lg);
