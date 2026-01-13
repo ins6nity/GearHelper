@@ -19,11 +19,11 @@ export const CLOCK_SLOTS: SlotConfig[] = [
     { id: 'HELMET', label: 'Helmet', hour: 12 },
     { id: 'EARRING_RIGHT', label: 'Earring R', hour: 1 },
     { id: 'RING_RIGHT', label: 'Ring R', hour: 2 },
-    { id: 'ARTEFACT_RIGHT', label: 'Artefact R', hour: 3 },
+    { id: 'AWAKENING', label: 'Awakening', hour: 3 },
     // 4h, 5h empty for future items
     { id: 'WEAPON', label: 'Weapon', hour: 6 },
     // 7h, 8h empty for future items  
-    { id: 'ARTEFACT_LEFT', label: 'Artefact L', hour: 9 },
+    { id: 'BELT', label: 'Belt', hour: 9 },
     { id: 'RING_LEFT', label: 'Ring L', hour: 10 },
     { id: 'EARRING_LEFT', label: 'Earring L', hour: 11 },
 ];
